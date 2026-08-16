@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Version tag (e.g., v2.9+26.1)"
+        description: "Version tag (e.g., v2.9+26.2)"
         required: true
         type: string
       name:
@@ -22,11 +22,11 @@ on:
       game_versions:
         description: "Minecraft versions on Modrinth/CurseForge"
         required: true
-        default: "26.1"
+        default: "26.2"
         type: choice
         options:
-          - "26.1"
-          - "26.1.x"
+          - "26.2"
+          - "26.2.x"
       prerelease:
         description: "Mark as prerelease?"
         required: true
