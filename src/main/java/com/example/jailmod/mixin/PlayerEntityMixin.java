@@ -8,18 +8,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import com.example.jailmod.JailMod;
 
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Prediction;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
-@Mixin(Player.class)
+@Mixin(ServerPlayer.class)
 public class PlayerEntityMixin {
 
-    @Inject(method = "drop(Lnet/minecraft/world/item/ItemStack;Z)Lnet/minecraft/world/entity/item/ItemEntity;", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "drop(Lnet/minecraft/world/item/ItemStack;ZLnet/minecraft/util/Prediction;)Lnet/minecraft/world/entity/item/ItemEntity;", at = @At("HEAD"), cancellable = true)
     private void jailmod$preventDrop(ItemStack stack, boolean retainOwnership,
-            CallbackInfoReturnable<ItemEntity> cir) {
-        Player self = (Player) (Object) this;
-        if (self instanceof ServerPlayer serverPlayer && JailMod.isPlayerInJail(serverPlayer)) {
+            Prediction prediction, CallbackInfoReturnable<ItemEntity> cir) {
+        ServerPlayer serverPlayer = (ServerPlayer) (Object) this;
+        if (JailMod.isPlayerInJail(serverPlayer)) {
             if (!stack.isEmpty()) {
                 serverPlayer.getInventory().add(stack);
                 serverPlayer.getInventory().setChanged();
