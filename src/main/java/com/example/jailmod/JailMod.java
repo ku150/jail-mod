@@ -36,6 +36,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -79,6 +80,12 @@ public class JailMod implements ModInitializer {
                 builder.suggest(player.getName().getString());
             }
         }
+        return builder.buildFuture();
+    };
+    private static final SuggestionProvider<CommandSourceStack> RETURN_TO_LAST_LOCATION_SUGGESTIONS = (context, builder) -> {
+        //sugerir true o false
+        builder.suggest("true");
+        builder.suggest("false");
         return builder.buildFuture();
     };
     private static ConfigFormat configFormat = ConfigFormat.JSON;
@@ -229,6 +236,8 @@ public class JailMod implements ModInitializer {
         });
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+
+            // 1. ÁRBOL PRINCIPAL: /jail
             dispatcher.register(Commands.literal("jail")
                     .then(Commands.literal("imprison")
                             .requires(source -> hasAdminPermission(source))
@@ -236,66 +245,52 @@ public class JailMod implements ModInitializer {
                                     .then(Commands.argument("time", IntegerArgumentType.integer(1))
                                             .then(Commands.argument("reason", StringArgumentType.greedyString())
                                                     .executes(context -> {
-                                                        ServerPlayer player = EntityArgument
-                                                                .getPlayer(context, "player");
-                                                        int timeInSeconds = IntegerArgumentType.getInteger(context,
-                                                                "time");
+                                                        ServerPlayer player = EntityArgument.getPlayer(context, "player");
+                                                        int timeInSeconds = IntegerArgumentType.getInteger(context, "time");
                                                         String reason = StringArgumentType.getString(context, "reason");
 
                                                         if (player != null) {
-                                                            JailUpdateResult result = jailPlayer(player, timeInSeconds,
-                                                                    reason, context.getSource().getTextName(), true);
+                                                            JailUpdateResult result = jailPlayer(player, timeInSeconds, reason, context.getSource().getTextName(), true);
                                                             if (result.wasAlreadyJailed) {
-                                                                context.getSource().sendSuccess(
-                                                                        () -> Component.literal("Added " + result.addedSeconds
-                                                                                + " seconds to " + player.getName()
-                                                                                        .getString()
-                                                                                + ". Remaining: "
-                                                                                + result.totalSeconds + " seconds."),
-                                                                        true);
+                                                                context.getSource().sendSuccess(() -> Component.literal("Added " + result.addedSeconds + " seconds to " + player.getName().getString() + ". Remaining: " + result.totalSeconds + " seconds."), true);
                                                             } else {
-                                                                context.getSource().sendSuccess(
-                                                                        () -> Component.literal("Player "
-                                                                                + player.getName().getString()
-                                                                                + " jailed for " + timeInSeconds
-                                                                                + " seconds."),
-                                                                        true);
+                                                                context.getSource().sendSuccess(() -> Component.literal("Player " + player.getName().getString() + " jailed for " + timeInSeconds + " seconds."), true);
                                                             }
                                                         } else {
                                                             context.getSource().sendFailure(Component.literal("Player not found!"));
                                                         }
                                                         return 1;
-                                                    })))))
+                                                    })
+                                            )
+                                    )
+                            )
+                    )
                     .then(Commands.literal("reload")
                             .requires(source -> hasAdminPermission(source))
                             .executes(context -> {
                                 loadConfig();
                                 loadLanguage();
                                 discordNotifier.reload();
-                                context.getSource().sendSuccess(
-                                        () -> Component.literal(
-                                                "Configuration, language strings, and Discord message templates successfully reloaded!"),
-                                        true);
+                                context.getSource().sendSuccess(() -> Component.literal("Configuration, language strings, and Discord message templates successfully reloaded!"), true);
                                 return 1;
-                            }))
-                    .then(Commands.literal("set")
+                            })
+                    )
+                    // COMANDO ACTUALIZADO: /jail set_jail_position <pos>
+                    .then(Commands.literal("set_jail_position")
                             .requires(source -> hasAdminPermission(source))
-                            .then(Commands.argument("x", IntegerArgumentType.integer())
-                                    .then(Commands.argument("y", IntegerArgumentType.integer())
-                                            .then(Commands.argument("z", IntegerArgumentType.integer())
-                                                    .executes(context -> {
-                                                        int x = IntegerArgumentType.getInteger(context, "x");
-                                                        int y = IntegerArgumentType.getInteger(context, "y");
-                                                        int z = IntegerArgumentType.getInteger(context, "z");
+                            .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                    .executes(context -> {
+                                        // Extraemos la posición final ya calculada por el juego
+                                        BlockPos pos = BlockPosArgument.getLoadedBlockPos(context, "pos");
 
-                                                        config.jail_position = new Config.Position(x, y, z);
-                                                        saveConfig();
+                                        config.jail_position = new Config.Position(pos.getX(), pos.getY(), pos.getZ());
+                                        saveConfig();
 
-                                                        context.getSource()
-                                                                .sendSuccess(() -> Component.literal("Jail position set to (" + x
-                                                                        + ", " + y + ", " + z + ")"), true);
-                                                        return 1;
-                                                    })))))
+                                        context.getSource().sendSuccess(() -> Component.literal("Jail position set to (" + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() + ")"), true);
+                                        return 1;
+                                    })
+                            )
+                    )
                     .then(Commands.literal("info")
                             .executes(context -> {
                                 ServerPlayer player = context.getSource().getPlayer();
@@ -313,8 +308,51 @@ public class JailMod implements ModInitializer {
                                     context.getSource().sendSuccess(() -> Component.literal(notInJailMessage), false);
                                     return 0;
                                 }
-                            })));
+                            })
+                    )
+                    .then(Commands.literal("return_to_last_location")
+                            .requires(source -> hasAdminPermission(source))
+                            .then(Commands.argument("value", StringArgumentType.word())
+                                    .suggests(RETURN_TO_LAST_LOCATION_SUGGESTIONS)
+                                    .executes(context -> {
+                                        String value = StringArgumentType.getString(context, "value");
+                                        if (value.equalsIgnoreCase("true")) {
+                                            config.return_to_last_location = true;
+                                            config.use_previous_position = true;
+                                            saveConfig();
+                                            context.getSource().sendSuccess(() -> Component.literal("return_to_last_location set to true."), false);
+                                        } else if (value.equalsIgnoreCase("false")) {
+                                            config.return_to_last_location = false;
+                                            config.use_previous_position = false;
+                                            saveConfig();
+                                            context.getSource().sendSuccess(() -> Component.literal("return_to_last_location set to false."), false);
+                                        } else {
+                                            context.getSource().sendFailure(Component.literal("Invalid value! Use 'true' or 'false'."));
+                                            return 0;
+                                        }
+                                        return 1;
+                                    })
+                            )
+                    )
+                    // COMANDO ACTUALIZADO: /jail set_release_position <pos>
+                    .then(Commands.literal("set_release_position")
+                            .requires(source -> hasAdminPermission(source))
+                            .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                    .executes(context -> {
+                                        // Extraemos la posición final ya calculada por el juego
+                                        BlockPos pos = BlockPosArgument.getLoadedBlockPos(context, "pos");
 
+                                        config.release_position = new Config.Position(pos.getX(), pos.getY(), pos.getZ());
+                                        saveConfig();
+
+                                        context.getSource().sendSuccess(() -> Component.literal("Release position set to (" + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() + ")"), true);
+                                        return 1;
+                                    })
+                            )
+                    )
+            ); // Cierra el dispatcher del comando /jail
+
+            // 2. ÁRBOL INDEPENDIENTE: /unjail
             dispatcher.register(Commands.literal("unjail")
                     .requires(source -> hasAdminPermission(source))
                     .then(Commands.argument("player", EntityArgument.player())
@@ -323,21 +361,18 @@ public class JailMod implements ModInitializer {
                                 ServerPlayer player = EntityArgument.getPlayer(context, "player");
                                 if (player != null) {
                                     if (!isPlayerInJail(player)) {
-                                        context.getSource().sendFailure(Component.literal("Player "
-                                                + player.getName().getString() + " is not jailed.")
-                                                .withStyle(ChatFormatting.RED));
+                                        context.getSource().sendFailure(Component.literal("Player " + player.getName().getString() + " is not jailed.").withStyle(ChatFormatting.RED));
                                         return 0;
                                     }
                                     unjailPlayer(player, true, context.getSource().getTextName());
-                                    context.getSource().sendSuccess(
-                                            () -> Component.literal("Player " + player.getName().getString()
-                                                    + " has been released from jail."),
-                                            true);
+                                    context.getSource().sendSuccess(() -> Component.literal("Player " + player.getName().getString() + " has been released from jail."), true);
                                 } else {
                                     context.getSource().sendFailure(Component.literal("Player not found!"));
                                 }
                                 return 1;
-                            })));
+                            })
+                    )
+            ); // Cierra el dispatcher del comando /unjail
         });
 
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> saveJailData());

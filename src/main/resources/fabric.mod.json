@@ -6,7 +6,8 @@
 	"description": "A server-side mod that allows administrators to jail players with time-based sentences and restrictions.",
 	"authors": [
 		"n3mmos",
-		"Abdo9616"
+		"Abdo9616",
+		"ku150"
 	],
 	"contact": {
 		"homepage": "https://github.com/Abdo9616/jail-mod",
