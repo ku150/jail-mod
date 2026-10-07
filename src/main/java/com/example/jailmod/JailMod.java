@@ -240,7 +240,7 @@ public class JailMod implements ModInitializer {
             // 1. ÁRBOL PRINCIPAL: /jail
             dispatcher.register(Commands.literal("jail")
                     .then(Commands.literal("imprison")
-                            .requires(source -> hasAdminPermission(source))
+                            .requires(JailMod::hasAdminPermission)
                             .then(Commands.argument("player", EntityArgument.player())
                                     .then(Commands.argument("time", IntegerArgumentType.integer(1))
                                             .then(Commands.argument("reason", StringArgumentType.greedyString())
@@ -266,7 +266,7 @@ public class JailMod implements ModInitializer {
                             )
                     )
                     .then(Commands.literal("reload")
-                            .requires(source -> hasAdminPermission(source))
+                            .requires(JailMod::hasAdminPermission)
                             .executes(context -> {
                                 loadConfig();
                                 loadLanguage();
@@ -277,7 +277,7 @@ public class JailMod implements ModInitializer {
                     )
                     // COMANDO ACTUALIZADO: /jail set_jail_position <pos>
                     .then(Commands.literal("set_jail_position")
-                            .requires(source -> hasAdminPermission(source))
+                            .requires(JailMod::hasAdminPermission)
                             .then(Commands.argument("pos", BlockPosArgument.blockPos())
                                     .executes(context -> {
                                         // Extraemos la posición final ya calculada por el juego
@@ -311,7 +311,7 @@ public class JailMod implements ModInitializer {
                             })
                     )
                     .then(Commands.literal("return_to_last_location")
-                            .requires(source -> hasAdminPermission(source))
+                            .requires(JailMod::hasAdminPermission)
                             .then(Commands.argument("value", StringArgumentType.word())
                                     .suggests(RETURN_TO_LAST_LOCATION_SUGGESTIONS)
                                     .executes(context -> {
@@ -336,7 +336,7 @@ public class JailMod implements ModInitializer {
                     )
                     // COMANDO ACTUALIZADO: /jail set_release_position <pos>
                     .then(Commands.literal("set_release_position")
-                            .requires(source -> hasAdminPermission(source))
+                            .requires(JailMod::hasAdminPermission)
                             .then(Commands.argument("pos", BlockPosArgument.blockPos())
                                     .executes(context -> {
                                         // Extraemos la posición final ya calculada por el juego
@@ -543,7 +543,7 @@ public class JailMod implements ModInitializer {
         ServerLevel world = (ServerLevel) player.level();
 
         BlockPos jailPos = new BlockPos(config.jail_position.x, config.jail_position.y, config.jail_position.z);
-        player.teleportTo(world, jailPos.getX() + 0.5, jailPos.getY(), jailPos.getZ() + 0.5,
+        player.teleportTo(world.getServer().getLevel(Level.OVERWORLD), jailPos.getX() + 0.5, jailPos.getY(), jailPos.getZ() + 0.5,
                 EnumSet.noneOf(Relative.class), player.getYRot(), player.getXRot(), false);
 
         applyFrozenStats(player, jailData);
@@ -608,7 +608,7 @@ public class JailMod implements ModInitializer {
             } else {
                 BlockPos releasePos = new BlockPos(config.release_position.x, config.release_position.y,
                         config.release_position.z);
-                player.teleportTo(world, releasePos.getX() + 0.5, releasePos.getY(), releasePos.getZ() + 0.5,
+                player.teleportTo(world.getServer().getLevel(Level.OVERWORLD), releasePos.getX() + 0.5, releasePos.getY(), releasePos.getZ() + 0.5,
                         EnumSet.noneOf(Relative.class), player.getYRot(), player.getXRot(), false);
             }
 
