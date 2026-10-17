@@ -543,7 +543,7 @@ public class JailMod implements ModInitializer {
         ServerLevel world = (ServerLevel) player.level();
 
         BlockPos jailPos = new BlockPos(config.jail_position.x, config.jail_position.y, config.jail_position.z);
-        player.teleportTo(world, jailPos.getX() + 0.5, jailPos.getY(), jailPos.getZ() + 0.5,
+        player.teleportTo(world.getServer().getLevel(Level.OVERWORLD), jailPos.getX() + 0.5, jailPos.getY(), jailPos.getZ() + 0.5,
                 EnumSet.noneOf(Relative.class), player.getYRot(), player.getXRot(), false);
 
         applyFrozenStats(player, jailData);
@@ -608,7 +608,7 @@ public class JailMod implements ModInitializer {
             } else {
                 BlockPos releasePos = new BlockPos(config.release_position.x, config.release_position.y,
                         config.release_position.z);
-                player.teleportTo(world, releasePos.getX() + 0.5, releasePos.getY(), releasePos.getZ() + 0.5,
+                player.teleportTo(world.getServer().getLevel(Level.OVERWORLD), releasePos.getX() + 0.5, releasePos.getY(), releasePos.getZ() + 0.5,
                         EnumSet.noneOf(Relative.class), player.getYRot(), player.getXRot(), false);
             }
 
